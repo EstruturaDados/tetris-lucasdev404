@@ -5,25 +5,25 @@
 #define TAM_FILA 5
 #define TAM_PILHA 3
 
-// Estrutura que representa uma peça do jogo
+// Estrutura que representa uma peça
 typedef struct {
     char tipo;
     int id;
 } Peca;
 
-// Estrutura para a fila circular
+// Estrutura da fila circular
 typedef struct {
     Peca itens[TAM_FILA];
     int frente, tras, tamanho;
 } Fila;
 
-// Estrutura para a pilha de reserva
+// Estrutura da pilha
 typedef struct {
     Peca itens[TAM_PILHA];
     int topo;
 } Pilha;
 
-// Funções da fila
+// ---------- FUNÇÕES DE FILA ----------
 void inicializarFila(Fila *f) {
     f->frente = 0;
     f->tras = -1;
@@ -55,7 +55,7 @@ Peca desenfileirar(Fila *f) {
     return p;
 }
 
-// Funções da pilha
+// ---------- FUNÇÕES DE PILHA ----------
 void inicializarPilha(Pilha *p) {
     p->topo = -1;
 }
@@ -84,7 +84,7 @@ Peca desempilhar(Pilha *p) {
     return peça;
 }
 
-// Geração de peças aleatórias
+// ---------- FUNÇÃO DE GERAÇÃO DE PEÇAS ----------
 Peca gerarPeca(int id) {
     char tipos[] = {'I', 'O', 'T', 'L'};
     Peca p;
@@ -93,7 +93,7 @@ Peca gerarPeca(int id) {
     return p;
 }
 
-// Exibição das estruturas
+// ---------- EXIBIÇÃO DAS ESTRUTURAS ----------
 void exibirFila(Fila *f) {
     printf("Fila de peças:\t");
     int i, index = f->frente;
@@ -117,22 +117,58 @@ void exibirPilha(Pilha *p) {
 }
 
 void exibirEstado(Fila *f, Pilha *p) {
-    printf("\n=== ESTADO ATUAL ===\n");
+    printf("\n========== ESTADO ATUAL ==========\n");
     exibirFila(f);
     exibirPilha(p);
-    printf("=====================\n");
+    printf("==================================\n");
 }
 
-// Função principal
+// ---------- TROCAS ENTRE FILA E PILHA ----------
+void trocarPeçaAtual(Fila *f, Pilha *p) {
+    if (filaVazia(f) || pilhaVazia(p)) {
+        printf("\n⚠️  Não é possível trocar: uma das estruturas está vazia!\n");
+        return;
+    }
+
+    int indiceFrente = f->frente;
+    Peca temp = f->itens[indiceFrente];
+    f->itens[indiceFrente] = p->itens[p->topo];
+    p->itens[p->topo] = temp;
+
+    printf("\n🔄 Troca realizada entre a frente da fila e o topo da pilha!\n");
+}
+
+void trocarTres(Fila *f, Pilha *p) {
+    if (f->tamanho < 3 || p->topo < 2) {
+        printf("\n⚠️  Não há peças suficientes para a troca múltipla!\n");
+        return;
+    }
+
+    for (int i = 0; i < 3; i++) {
+        int indiceFila = (f->frente + i) % TAM_FILA;
+        Peca temp = f->itens[indiceFila];
+        f->itens[indiceFila] = p->itens[p->topo - i];
+        p->itens[p->topo - i] = temp;
+    }
+
+    printf("\n🔁 Troca múltipla (3 peças) realizada entre fila e pilha!\n");
+}
+
+// ---------- FUNÇÃO PRINCIPAL ----------
 int main() {
     Fila fila;
     Pilha pilha;
     int opcao, idGerado = 0;
 
     srand(time(NULL));
-
     inicializarFila(&fila);
     inicializarPilha(&pilha);
+
+    // --- TÍTULO DO JOGO ---
+    printf("=====================================\n");
+    printf("         🎮 TETRIS STACK 🎮          \n");
+    printf("  Gerenciador de Peças - ByteBros\n");
+    printf("=====================================\n\n");
 
     // Preenche a fila inicial
     for (int i = 0; i < TAM_FILA; i++) {
@@ -143,50 +179,64 @@ int main() {
         exibirEstado(&fila, &pilha);
 
         printf("\nOpções de Ação:\n");
-        printf("1 - Jogar peça\n");
-        printf("2 - Reservar peça\n");
-        printf("3 - Usar peça reservada\n");
+        printf("1 - Jogar peça da frente da fila\n");
+        printf("2 - Enviar peça da fila para a pilha de reserva\n");
+        printf("3 - Usar peça da pilha de reserva\n");
+        printf("4 - Trocar peça da frente da fila com o topo da pilha\n");
+        printf("5 - Trocar as 3 primeiras da fila com as 3 peças da pilha\n");
         printf("0 - Sair\n");
         printf("Escolha: ");
         scanf("%d", &opcao);
         getchar();
 
         switch (opcao) {
-            case 1: {
+            case 1: { // Jogar peça
                 if (filaVazia(&fila)) {
-                    printf("\n⚠️  A fila está vazia!\n");
+                    printf("\n⚠️  Fila vazia!\n");
                 } else {
                     Peca jogada = desenfileirar(&fila);
                     printf("\n🎮 Peça jogada: [%c %d]\n", jogada.tipo, jogada.id);
-                    enfileirar(&fila, gerarPeca(idGerado++)); // Mantém fila cheia
-                }
-                break;
-            }
-            case 2: {
-                if (filaVazia(&fila)) {
-                    printf("\n⚠️  Não há peças na fila para reservar!\n");
-                } else if (pilhaCheia(&pilha)) {
-                    printf("\n⚠️  A pilha de reserva está cheia!\n");
-                } else {
-                    Peca reservada = desenfileirar(&fila);
-                    empilhar(&pilha, reservada);
-                    printf("\n📦 Peça [%c %d] movida para reserva.\n", reservada.tipo, reservada.id);
                     enfileirar(&fila, gerarPeca(idGerado++));
                 }
                 break;
             }
-            case 3: {
+
+            case 2: { // Reservar peça
+                if (filaVazia(&fila)) {
+                    printf("\n⚠️  Fila vazia!\n");
+                } else if (pilhaCheia(&pilha)) {
+                    printf("\n⚠️  Pilha cheia!\n");
+                } else {
+                    Peca reservada = desenfileirar(&fila);
+                    empilhar(&pilha, reservada);
+                    printf("\n📦 Peça [%c %d] movida para a reserva.\n", reservada.tipo, reservada.id);
+                    enfileirar(&fila, gerarPeca(idGerado++));
+                }
+                break;
+            }
+
+            case 3: { // Usar peça reservada
                 if (pilhaVazia(&pilha)) {
-                    printf("\n⚠️  Nenhuma peça na reserva!\n");
+                    printf("\n⚠️  Nenhuma peça na pilha de reserva!\n");
                 } else {
                     Peca usada = desempilhar(&pilha);
                     printf("\n🚀 Peça [%c %d] usada da reserva!\n", usada.tipo, usada.id);
                 }
                 break;
             }
+
+            case 4:
+                trocarPeçaAtual(&fila, &pilha);
+                break;
+
+            case 5:
+                trocarTres(&fila, &pilha);
+                break;
+
             case 0:
                 printf("\nSaindo do jogo... 👋\n");
                 break;
+
             default:
                 printf("\n❌ Opção inválida! Tente novamente.\n");
         }
